@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ============================================================
 // POST /api/uma/import-calendar
@@ -202,14 +202,15 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'Agent.ai Moodle Bridge', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-    console.log(`\n🚀 Agent.ai Moodle Backend corriendo en http://localhost:${PORT}`);
-    console.log(`   Endpoints disponibles:`);
-    console.log(`   POST /api/uma/import-calendar → Importar calendario ICS`);
-    console.log(`   GET  /api/health              → Estado del servidor\n`);
-});
-
 // SPA Catch-all
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('=============================================');
+    console.log(`🚀 SERVIDOR ACTIVO EN PUERTO: ${PORT}`);
+    console.log(`🏠 Dominio: http://0.0.0.0:${PORT}`);
+    console.log(`📂 Sirviendo archivos desde: ${path.join(__dirname, 'public')}`);
+    console.log('=============================================');
 });
