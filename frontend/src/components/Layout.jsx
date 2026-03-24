@@ -38,7 +38,7 @@ const Layout = ({ children }) => {
 
             <nav style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '80px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', background: 'rgba(3, 7, 18, 0.8)', backdropFilter: 'blur(20px)', borderTop: '1px solid var(--glass-border)', padding: '0 10px 10px' }}>
                 {navItems.map((item) => {
-                    const isActive = location.pathname === item.path || (item.path === '/tasks' && location.pathname === '/');
+                    const isActive = location.pathname === item.path;
                     return (
                         <Link key={item.path} to={item.path} style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: isActive ? 'var(--primary)' : 'var(--text-muted)', transition: 'var(--transition)' }}>
                             <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
