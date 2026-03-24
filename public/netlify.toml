@@ -1,5 +1,5 @@
 [build]
-  publish = "dist"
+  publish = "public"
 
 # Proxy API calls to the Render backend
 [[redirects]]
