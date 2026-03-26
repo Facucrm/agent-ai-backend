@@ -2,9 +2,15 @@ import React, { useState } from 'react';
 import { TrendingUp, Zap, Check, Crown, Sparkles, Star, ArrowRight, Shield, X, CreditCard, Building2, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useUser, ROLES } from '../context/UserContext';
+import PremiumFeature from '../components/PremiumFeature';
+import SyncUMA from '../components/SyncUMA';
+import SurvivalAlerts from '../components/SurvivalAlerts';
+import ExamMode from '../components/ExamMode';
 
 const HomePage = () => {
     const navigate = useNavigate();
+    const { user, isPremium, upgradeToPremium } = useUser();
 
     // ── Payment modal state ────────────────────────────────
     const [showCheckout, setShowCheckout] = useState(false);
@@ -41,74 +47,45 @@ const HomePage = () => {
     const plans = [
         {
             id: 'free',
-            name: 'Gratuito',
+            name: 'Plan Gratuito',
             price: '0€',
-            period: 'para siempre',
-            description: 'Perfecto para empezar a organizar tus tareas',
+            period: 'siempre',
+            description: 'Organización académica básica',
             color: 'var(--text-secondary)',
             gradient: 'rgba(100,116,139,0.08)',
             border: 'var(--glass-border)',
             features: [
-                'Gestión manual de tareas',
-                'Vista diaria, semanal y mensual',
-                'Progreso académico básico',
-                '5 anuncios al día (2 tokens c/u)',
+                'Calendario mensual',
+                'Lista de tareas manual',
+                'Configuración básica',
             ],
-            cta: 'Plan Actual',
-            disabled: true,
+            cta: user.role === ROLES.FREE ? 'Plan Actual' : 'Básico',
+            disabled: user.role === ROLES.FREE,
         },
         {
-            id: 'pro',
-            name: 'Pro',
-            price: '2,99€',
-            period: '/mes',
-            description: 'Desbloquea la productividad con IA y voz',
+            id: 'premium',
+            name: 'Planit Premium',
+            price: '4,99€',
+            period: '/semestre',
+            description: '¡Asegura tu aprobado con IA!',
             color: 'var(--primary)',
             gradient: 'rgba(59,130,246,0.12)',
             border: 'rgba(59,130,246,0.4)',
             popular: true,
-            billingOptions: [
-                { label: 'Mensual', price: '2,99€', period: '/mes', value: 2.99, savings: null },
-                { label: 'Trimestral', price: '7€', period: '/trimestre', value: 7, savings: 'Ahorra 22%' },
-                { label: 'Anual', price: '19,99€', period: '/año', value: 19.99, savings: 'Ahorra 44%' },
-            ],
             features: [
-                'Todo del plan Gratuito',
-                '🎤 Tareas por voz ilimitadas',
-                '🔗 Sincronización Campus Virtual',
-                '50 tokens mensuales incluidos',
+                'Todo lo anterior',
+                '🔗 Sync Automática UMA',
+                '🚨 Smart Alertas "Survival"',
+                '⏲️ Modo Examen (Pomodoro)',
                 'Sin anuncios',
-                'Soporte prioritario',
             ],
-            cta: 'Empezar Pro',
-            disabled: false,
-        },
-        {
-            id: 'institution',
-            name: 'Instituciones',
-            price: 'Personalizado',
-            period: '',
-            description: 'Para academias, universidades y centros educativos',
-            color: 'var(--secondary)',
-            gradient: 'rgba(139,92,246,0.12)',
-            border: 'rgba(139,92,246,0.4)',
-            features: [
-                'Todo del plan Pro',
-                '🏫 Multi-usuario para alumnos',
-                '📊 Panel de administración',
-                '🤖 Planificación IA automática',
-                'Tokens ilimitados para el centro',
-                'Soporte dedicado 24/7',
-                'Precio por volumen de alumnos',
-            ],
-            cta: 'Contáctanos',
-            disabled: false,
-            isInstitution: true,
+            cta: isPremium ? 'Premium Activo' : 'Mejorar ahora',
+            disabled: isPremium,
         },
     ];
 
     // ── Payment handlers ───────────────────────────────────
-    const openCheckout = (plan, billing) => {
+    const openCheckout = (plan, billing = { label: 'Semestral', price: '4,99€', period: '/semestre' }) => {
         setCheckoutPlan({ ...plan, selectedBilling: billing });
         setPaymentStep('form');
         setCardNumber('');
@@ -121,7 +98,12 @@ const HomePage = () => {
     const handlePayment = (e) => {
         e.preventDefault();
         setPaymentStep('processing');
-        setTimeout(() => setPaymentStep('success'), 2500);
+
+        // Simular procesamiento bancario
+        setTimeout(() => {
+            upgradeToPremium(180); // 1 semestre = ~180 días
+            setPaymentStep('success');
+        }, 2000);
     };
 
     const formatCardNumber = (v) => {
@@ -135,19 +117,12 @@ const HomePage = () => {
         return nums;
     };
 
-    // ── Contact handler ────────────────────────────────────
-    const handleContact = (e) => {
-        e.preventDefault();
-        setContactSent(true);
-        setTimeout(() => { setShowContact(false); setContactSent(false); setContactName(''); setContactEmail(''); setContactInstitution(''); setContactStudents(''); setContactMessage(''); }, 3000);
-    };
-
     return (
         <div className="page-content" style={{ paddingBottom: '100px' }}>
             {/* Header */}
             <div style={{ marginBottom: '28px' }}>
-                <h2 style={{ fontSize: '1.6rem', marginBottom: '4px' }}>¡Hola! 👋</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Tu resumen académico de un vistazo</p>
+                <h2 style={{ fontSize: '1.6rem', marginBottom: '8px', fontWeight: 800 }}>¡Hola, {user?.name.split(' ')[0]}! 👋</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>¿Qué tenemos hoy en el Campus?</p>
             </div>
 
             {/* ── Progress Overview ── */}
@@ -172,13 +147,35 @@ const HomePage = () => {
                 })}
             </div>
 
+            {/* ── Premium Features Showcase ── */}
+            <div style={{ marginBottom: '32px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <Crown size={20} color="var(--primary)" />
+                    <h3 style={{ fontSize: '1.2rem' }}>Funciones Premium</h3>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <PremiumFeature>
+                        <SyncUMA />
+                    </PremiumFeature>
+
+                    <PremiumFeature>
+                        <SurvivalAlerts />
+                    </PremiumFeature>
+
+                    <PremiumFeature>
+                        <ExamMode />
+                    </PremiumFeature>
+                </div>
+            </div>
+
             {/* ── Subscription Plans ── */}
             <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                     <Crown size={20} color="var(--secondary)" />
                     <h3 style={{ fontSize: '1.2rem' }}>Planes de Suscripción</h3>
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Elige el plan que mejor se adapte a ti</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Mejora tu plan o invita a amigos para desbloquear gratis</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -190,28 +187,14 @@ const HomePage = () => {
 
                         <div style={{ marginBottom: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                {plan.isInstitution && <Building2 size={20} color={plan.color} />}
                                 <h4 style={{ fontSize: '1.1rem', color: plan.color }}>{plan.name}</h4>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '4px' }}>
-                                <span style={{ fontSize: plan.isInstitution ? '1.5rem' : '2rem', fontWeight: 800 }}>{plan.price}</span>
+                                <span style={{ fontSize: '2rem', fontWeight: 800 }}>{plan.price}</span>
                                 {plan.period && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{plan.period}</span>}
                             </div>
                             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{plan.description}</p>
                         </div>
-
-                        {/* Billing options for Pro */}
-                        {plan.billingOptions && (
-                            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                {plan.billingOptions.map((b) => (
-                                    <button key={b.label} onClick={() => openCheckout(plan, b)} style={{ flex: 1, minWidth: '90px', padding: '10px 6px', borderRadius: '10px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', cursor: 'pointer', textAlign: 'center', fontFamily: 'var(--font-main)', transition: 'var(--transition)' }}>
-                                        <span style={{ display: 'block', fontWeight: 800, fontSize: '0.9rem', color: 'var(--primary)' }}>{b.price}</span>
-                                        <span style={{ display: 'block', fontSize: '0.6rem', color: 'var(--text-muted)' }}>{b.label}</span>
-                                        {b.savings && <span style={{ display: 'block', fontSize: '0.55rem', color: 'var(--success)', fontWeight: 700, marginTop: '2px' }}>{b.savings}</span>}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
                             {plan.features.map((f, j) => (
@@ -225,13 +208,12 @@ const HomePage = () => {
                         <button
                             onClick={() => {
                                 if (plan.disabled) return;
-                                if (plan.isInstitution) { setShowContact(true); return; }
-                                if (plan.billingOptions) { openCheckout(plan, plan.billingOptions[0]); return; }
+                                if (plan.id === 'premium') { openCheckout(plan); return; }
                             }}
                             disabled={plan.disabled}
                             style={{ width: '100%', padding: '14px', borderRadius: '12px', border: plan.disabled ? '1px solid var(--glass-border)' : 'none', background: plan.disabled ? 'transparent' : plan.color, color: plan.disabled ? 'var(--text-muted)' : 'white', fontWeight: 700, fontSize: '0.9rem', cursor: plan.disabled ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontFamily: 'var(--font-main)', transition: 'var(--transition)', opacity: plan.disabled ? 0.5 : 1 }}
                         >
-                            {plan.isInstitution ? <><Send size={16} /> {plan.cta}</> : <>{plan.cta} {!plan.disabled && <ArrowRight size={16} />}</>}
+                            {plan.cta} {!plan.disabled && <ArrowRight size={16} />}
                         </button>
                     </motion.div>
                 ))}
@@ -255,9 +237,9 @@ const HomePage = () => {
                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
                                         <CheckCircle2 size={64} color="var(--success)" style={{ marginBottom: '20px' }} />
                                     </motion.div>
-                                    <h3 style={{ fontSize: '1.4rem', marginBottom: '8px' }}>¡Bienvenido a Pro! 🎉</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>Tu suscripción está activa. Disfruta de todas las funciones premium.</p>
-                                    <button onClick={() => setShowCheckout(false)} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Empezar a usar Planit Pro</button>
+                                    <h3 style={{ fontSize: '1.4rem', marginBottom: '8px' }}>¡Bienvenido a Premium! 🎉</h3>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>Tu suscripción está activa. Disfruta de todas las funciones de Planit.</p>
+                                    <button onClick={() => setShowCheckout(false)} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '14px' }}>Empezar</button>
                                 </div>
                             ) : (
                                 <>
@@ -268,10 +250,9 @@ const HomePage = () => {
                                         <h3 style={{ color: 'white', fontSize: '1.2rem' }}>Checkout Seguro</h3>
                                         <div style={{ marginTop: '12px', background: 'rgba(255,255,255,0.15)', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <div>
-                                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Plan Pro — {checkoutPlan.selectedBilling.label}</span>
-                                                <p style={{ color: 'white', fontWeight: 800, fontSize: '1.2rem' }}>{checkoutPlan.selectedBilling.price}<span style={{ fontSize: '0.75rem', fontWeight: 400 }}>{checkoutPlan.selectedBilling.period}</span></p>
+                                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem' }}>Planit Premium</span>
+                                                <p style={{ color: 'white', fontWeight: 800, fontSize: '1.2rem' }}>4,99€<span style={{ fontSize: '0.75rem', fontWeight: 400 }}>/semestre</span></p>
                                             </div>
-                                            {checkoutPlan.selectedBilling.savings && <span style={{ background: 'rgba(16,185,129,0.3)', color: '#6ee7b7', padding: '4px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 700 }}>{checkoutPlan.selectedBilling.savings}</span>}
                                         </div>
                                     </div>
 
@@ -281,7 +262,6 @@ const HomePage = () => {
                                             <div style={{ textAlign: 'center', padding: '40px 0' }}>
                                                 <Loader2 className="animate-spin" size={40} color="var(--primary)" style={{ marginBottom: '16px' }} />
                                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Procesando pago...</p>
-                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>No cierres esta ventana</p>
                                             </div>
                                         ) : (
                                             <form onSubmit={handlePayment}>
@@ -304,79 +284,10 @@ const HomePage = () => {
                                                     </div>
                                                 </div>
                                                 <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '1rem' }}>
-                                                    <CreditCard size={18} /> Pagar {checkoutPlan.selectedBilling.price}
+                                                    <CreditCard size={18} /> Pagar 4,99€
                                                 </button>
-                                                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '12px' }}>
-                                                    {['🔒 SSL 256-bit', '💳 Visa / Mastercard'].map(t => (
-                                                        <span key={t} style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{t}</span>
-                                                    ))}
-                                                </div>
                                             </form>
                                         )}
-                                    </div>
-                                </>
-                            )}
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
-
-            {/* ══════ Institution Contact Modal ══════ */}
-            <AnimatePresence>
-                {showContact && (
-                    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowContact(false)}>
-                        <motion.div initial={{ opacity: 0, y: 50, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }} style={{ background: 'var(--bg-dark)', border: '1px solid var(--glass-border)', borderRadius: '28px', width: '100%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)' }}>
-
-                            {contactSent ? (
-                                <div style={{ padding: '60px 24px', textAlign: 'center' }}>
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }}>
-                                        <Send size={48} color="var(--secondary)" style={{ marginBottom: '20px' }} />
-                                    </motion.div>
-                                    <h3 style={{ fontSize: '1.3rem', marginBottom: '8px' }}>¡Mensaje enviado! ✉️</h3>
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Nuestro equipo se pondrá en contacto contigo en menos de 24 horas.</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <div style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', padding: '24px', borderRadius: '28px 28px 0 0', position: 'relative' }}>
-                                        <button onClick={() => setShowContact(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={16} color="white" /></button>
-                                        <Building2 size={28} color="white" style={{ marginBottom: '8px' }} />
-                                        <h3 style={{ color: 'white', fontSize: '1.2rem' }}>Plan Instituciones</h3>
-                                        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>Cuéntanos sobre tu centro y te prepararemos una propuesta a medida</p>
-                                    </div>
-
-                                    <div style={{ padding: '24px' }}>
-                                        <form onSubmit={handleContact}>
-                                            <div className="form-group">
-                                                <label className="form-label">Nombre de contacto</label>
-                                                <input className="form-input" placeholder="María García" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Email institucional</label>
-                                                <input className="form-input" type="email" placeholder="maria@universidad.es" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Nombre de la institución</label>
-                                                <input className="form-input" placeholder="Universidad de Málaga" value={contactInstitution} onChange={(e) => setContactInstitution(e.target.value)} required />
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Número aproximado de alumnos</label>
-                                                <select className="form-input" value={contactStudents} onChange={(e) => setContactStudents(e.target.value)} required>
-                                                    <option value="">Selecciona un rango</option>
-                                                    <option>1 – 50 alumnos</option>
-                                                    <option>51 – 200 alumnos</option>
-                                                    <option>201 – 500 alumnos</option>
-                                                    <option>501 – 1.000 alumnos</option>
-                                                    <option>Más de 1.000 alumnos</option>
-                                                </select>
-                                            </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Mensaje (opcional)</label>
-                                                <textarea className="form-input" placeholder="Cuéntanos qué necesitas..." value={contactMessage} onChange={(e) => setContactMessage(e.target.value)} rows={3} style={{ resize: 'none' }} />
-                                            </div>
-                                            <button type="submit" className="btn" style={{ width: '100%', padding: '16px', borderRadius: '14px', fontSize: '1rem', background: 'var(--secondary)', color: 'white', boxShadow: '0 4px 12px var(--secondary-glow)' }}>
-                                                <Send size={18} /> Enviar solicitud
-                                            </button>
-                                        </form>
                                     </div>
                                 </>
                             )}
