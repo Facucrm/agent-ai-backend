@@ -1,6 +1,12 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/uma/import-calendar"
+  to = "/.netlify/functions/import-calendar"
+  status = 200
 
 [[redirects]]
   from = "/*"
