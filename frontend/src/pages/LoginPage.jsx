@@ -4,6 +4,7 @@ import { Mail, Lock, User, LogIn, ChevronRight, AlertCircle, Loader2 } from 'luc
 import { auth, googleProvider } from '../lib/firebase';
 import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 
 import { useUser } from '../context/UserContext';
 
@@ -87,17 +88,14 @@ const LoginPage = () => {
             >
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <div style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '20px',
-                        background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)',
+                        width: '72px',
+                        height: '72px',
                         margin: '0 auto 16px',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 0 30px var(--primary-glow)'
+                        justifyContent: 'center'
                     }}>
-                        <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'white' }}>P</span>
+                        <Logo size={72} />
                     </div>
                     <h2 style={{ fontSize: '1.75rem', color: 'white', marginBottom: '8px', fontWeight: 700 }}>{isLogin ? '¡Bienvenido de nuevo!' : 'Crea tu cuenta'}</h2>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{isLogin ? 'Tus tareas y metas te esperan.' : 'Comienza tu viaje académico inteligente.'}</p>

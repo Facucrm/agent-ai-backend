@@ -16,9 +16,13 @@ const Layout = ({ children }) => {
         <div className="app-container">
             <header style={{ padding: '24px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h1 style={{ fontSize: '1.5rem', background: 'linear-gradient(to right, #fff, var(--primary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 800 }}>Planit.</h1>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <Bell size={20} color="var(--text-muted)" />
-                    <User size={20} color="var(--text-muted)" />
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                    <Link to="/notifications" style={{ textDecoration: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', transition: 'var(--transition)' }}>
+                        <Bell size={22} cursor="pointer" onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'} />
+                    </Link>
+                    <Link to="/profile" style={{ textDecoration: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', transition: 'var(--transition)' }}>
+                        <User size={22} cursor="pointer" onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'} />
+                    </Link>
                 </div>
             </header>
 

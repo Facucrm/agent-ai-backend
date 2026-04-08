@@ -1,20 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Link2, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Building2, ExternalLink, Zap, Info, FileText, ClipboardList, RefreshCw } from 'lucide-react';
+import { Link2, ArrowLeft, Loader2, CheckCircle2, AlertCircle, ExternalLink, Zap, Info, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTasks } from '../context/TasksContext';
 import { useUser } from '../context/UserContext';
 
 const SyncPage = () => {
     const navigate = useNavigate();
-    const { importTasks, umaUrl, syncWithUMA, isSyncing } = useTasks();
+    const { umaUrl, syncWithUMA } = useTasks(); // Eliminamos importTasks e isSyncing si no se usan aquí directamente
     const { user, setCalendarUrl } = useUser();
     const [apiUrl, setApiUrl] = useState(user?.calendarUrl || '');
     const [status, setStatus] = useState('idle'); // idle | connecting | success | error
     const [error, setError] = useState('');
     const [foundCount, setFoundCount] = useState(0);
-    const [syncMode, setSyncMode] = useState('link'); // 'link' | 'paste'
-    const [pastedIcs, setPastedIcs] = useState('');
 
     useEffect(() => {
         if (user?.calendarUrl && !apiUrl) {
@@ -24,85 +22,25 @@ const SyncPage = () => {
 
     const handleSync = async (e) => {
         if (e) e.preventDefault();
+
+        const urlToUse = apiUrl.trim();
+        if (!urlToUse) {
+            setStatus('error');
+            setError('Por favor, introduce una URL válida.');
+            return;
+        }
+
         setStatus('connecting');
         setError('');
 
-        if (syncMode === 'link') {
-            const urlToUse = apiUrl.trim();
-            if (!urlToUse) {
-                setStatus('error');
-                setError('Por favor, introduce una URL válida.');
-                return;
-            }
-
-            const result = await syncWithUMA(urlToUse);
-            if (result.success) {
-                setFoundCount(result.count);
-                setStatus('success');
-            } else {
-                setStatus('error');
-                setError(result.error);
-            }
+        const result = await syncWithUMA(urlToUse);
+        if (result.success) {
+            setFoundCount(result.count);
+            setStatus('success');
         } else {
-            try {
-                if (!pastedIcs.includes('BEGIN:VCALENDAR')) {
-                    throw new Error('El contenido pegado no parece un formato de ICS válido.');
-                }
-
-                // Logic already in context parser (hidden helper) or we use local
-                const parsed = parseICSLocally(pastedIcs);
-                const newTasks = parsed.map(evt => ({
-                    id: Math.random(),
-                    title: evt.title,
-                    time: evt.time,
-                    priority: evt.title.toLowerCase().includes('entrega') || evt.title.toLowerCase().includes('examen') ? 'Alta' : 'Media',
-                    category: 'UMA',
-                    source: 'UMA_IMPORT',
-                    subject: evt.subject,
-                    date: evt.date,
-                    status: 'pending'
-                }));
-
-                importTasks(newTasks);
-                setFoundCount(newTasks.length);
-                setStatus('success');
-            } catch (err) {
-                setStatus('error');
-                setError(err.message);
-            }
+            setStatus('error');
+            setError(result.error);
         }
-    };
-
-    const parseICSLocally = (data) => {
-        const events = [];
-        const normalizedData = data.replace(/\r?\n\s/g, '');
-        const lines = normalizedData.split(/\r?\n/);
-        let currentEvent = null;
-        for (let line of lines) {
-            const cleanLine = line.trim();
-            if (cleanLine === 'BEGIN:VEVENT') {
-                currentEvent = { priority: 'Media', category: 'UMA' };
-            } else if (cleanLine === 'END:VEVENT') {
-                if (currentEvent && currentEvent.title) events.push(currentEvent);
-                currentEvent = null;
-            } else if (currentEvent) {
-                if (cleanLine.startsWith('SUMMARY:')) {
-                    currentEvent.title = cleanLine.replace('SUMMARY:', '').trim();
-                } else if (cleanLine.startsWith('DESCRIPTION:')) {
-                    const desc = cleanLine.replace('DESCRIPTION:', '').trim();
-                    const subjectMatch = desc.match(/\[(.*?)\]/) || desc.match(/Asignatura:\s*(.*)/i);
-                    currentEvent.subject = subjectMatch ? subjectMatch[1] : 'UMA';
-                } else if (cleanLine.startsWith('DTSTART')) {
-                    const dtPart = cleanLine.split(':')[1];
-                    if (dtPart) {
-                        currentEvent.date = `${dtPart.slice(0, 4)}-${dtPart.slice(4, 6)}-${dtPart.slice(6, 8)}`;
-                        const t = dtPart.split('T')[1];
-                        currentEvent.time = t ? `${t.slice(0, 2)}:${t.slice(2, 4)}` : '23:59';
-                    }
-                }
-            }
-        }
-        return events;
     };
 
     return (
@@ -128,42 +66,45 @@ const SyncPage = () => {
             </header>
 
             <div style={{ maxWidth: '500px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'var(--glass-bg)', padding: '4px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-                    <button onClick={() => setSyncMode('link')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: syncMode === 'link' ? 'var(--primary)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <Link2 size={16} /> Enlace Campus
-                    </button>
-                    <button onClick={() => setSyncMode('paste')} style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: syncMode === 'paste' ? 'var(--primary)' : 'transparent', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                        <ClipboardList size={16} /> Pegado Manual
-                    </button>
+                <div className="card" style={{ padding: '24px', marginBottom: '24px', border: '1px solid rgba(59, 130, 246, 0.3)', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(3, 7, 18, 0.4) 100%)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ background: 'var(--primary)', padding: '10px', borderRadius: '12px' }}>
+                            <ExternalLink size={20} color="white" />
+                        </div>
+                        <div>
+                            <h4 style={{ fontSize: '1rem', color: 'white' }}>Paso 1: Obtén tu enlace</h4>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Desde el Campus Virtual UMA</p>
+                        </div>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.4 }}>
+                        Haz clic en el botón de abajo para ir directamente a la sección de exportación de calendario en el Campus Virtual. Elige <span style={{ color: 'white', fontWeight: 700 }}>"Todos los eventos"</span> y <span style={{ color: 'white', fontWeight: 700 }}>"Un año"</span>, luego copia la URL del botón <span style={{ color: 'white', fontWeight: 700 }}>"URL de calendario"</span>.
+                    </p>
+                    <a
+                        href="https://marketinggestion.cv.uma.es/calendar/export.php?"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn"
+                        style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white', textDecoration: 'none', textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                    >
+                        Abrir Campus Virtual <ExternalLink size={16} />
+                    </a>
                 </div>
 
                 <div className="card" style={{ padding: '24px', marginBottom: '24px' }}>
                     <form onSubmit={handleSync}>
-                        {syncMode === 'link' ? (
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label className="form-label">URL del Calendario (.ics)</label>
-                                <input
-                                    className="form-input"
-                                    placeholder="https://marketinggestion.cv.uma.es/..."
-                                    value={apiUrl}
-                                    onChange={(e) => setApiUrl(e.target.value)}
-                                    disabled={status === 'connecting'}
-                                    style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white' }}
-                                />
-                            </div>
-                        ) : (
-                            <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label className="form-label">Contenido ICS</label>
-                                <textarea
-                                    className="form-input"
-                                    placeholder="BEGIN:VCALENDAR..."
-                                    value={pastedIcs}
-                                    onChange={(e) => setPastedIcs(e.target.value)}
-                                    disabled={status === 'connecting'}
-                                    style={{ minHeight: '120px', fontSize: '0.7rem', fontFamily: 'monospace', width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white' }}
-                                />
-                            </div>
-                        )}
+                        <div className="form-group" style={{ marginBottom: '20px' }}>
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <Link2 size={16} color="var(--primary)" /> URL del Calendario (.ics)
+                            </label>
+                            <input
+                                className="form-input"
+                                placeholder="https://marketinggestion.cv.uma.es/..."
+                                value={apiUrl}
+                                onChange={(e) => setApiUrl(e.target.value)}
+                                disabled={status === 'connecting'}
+                                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', color: 'white' }}
+                            />
+                        </div>
 
                         {status === 'error' && (
                             <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--error)', padding: '12px', borderRadius: '10px', color: 'var(--error)', fontSize: '0.75rem', marginBottom: '20px', display: 'flex', gap: '8px' }}>
@@ -171,7 +112,7 @@ const SyncPage = () => {
                             </div>
                         )}
 
-                        <button type="submit" disabled={status === 'connecting'} className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'var(--primary)', boxShadow: '0 8px 20px var(--primary-glow)' }}>
+                        <button type="submit" disabled={status === 'connecting'} className="btn btn-primary" style={{ width: '100%', padding: '16px', borderRadius: '14px', background: 'var(--primary)', boxShadow: '0 8px 20px var(--primary-glow)', pointerEvents: status === 'connecting' ? 'none' : 'auto' }}>
                             {status === 'connecting' ? (
                                 <><Loader2 size={18} className="animate-spin" /> Conectando...</>
                             ) : (

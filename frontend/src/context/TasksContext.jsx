@@ -125,32 +125,33 @@ export const TasksProvider = ({ children }) => {
                 setCalendarUrl(url);
             }
 
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&_=${Date.now()}`;
-            const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Error de conexión con el servidor (Campus Virtual).');
+            // Usamos el backend propio encargado de parsear el ICS
+            const response = await fetch('/api/uma/import-calendar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ icsUrl: url })
+            });
 
-            const data = await response.json();
-            const icsContent = data.contents;
+            const result = await response.json();
 
-            if (!icsContent || !icsContent.includes('BEGIN:VCALENDAR')) {
-                throw new Error('El enlace no devolvió un calendario válido.');
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Error al importar el calendario.');
             }
 
-            const parsed = parseICS(icsContent);
+            const parsedTasks = result.tasks;
             const sixtyDaysAgo = new Date();
             sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-            const newTasks = parsed
-                .filter(evt => new Date(evt.date) >= sixtyDaysAgo)
-                .map(evt => ({
-                    id: Math.random(),
-                    title: evt.title,
-                    time: evt.time,
-                    priority: evt.title.toLowerCase().includes('entrega') || evt.title.toLowerCase().includes('examen') ? 'Alta' : 'Media',
+            // Filtrar por fecha (tareas recientes)
+            const newTasks = parsedTasks
+                .filter(t => new Date(t.rawDate) >= sixtyDaysAgo)
+                .map(t => ({
+                    ...t,
+                    id: Math.random(), // Generar un ID numérico/random para el frontend
                     category: 'UMA',
                     source: 'UMA_IMPORT',
-                    subject: evt.subject,
-                    date: evt.date,
                     status: 'pending'
                 }));
 

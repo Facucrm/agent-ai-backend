@@ -1,95 +1,75 @@
-const express = require('express');
-const cors = require('cors');
 const axios = require('axios');
-const path = require('path');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// ============================================================
-// POST /api/uma/import-calendar
-// Recibe { icsUrl } y devuelve las tareas parseadas del ICS
-// ============================================================
-app.post('/api/uma/import-calendar', async (req, res) => {
-    const { icsUrl } = req.body;
-
-    if (!icsUrl) {
-        return res.status(400).json({ error: 'Se requiere la URL del calendario.' });
-    }
-
-    // Validar que la URL sea de Moodle (UMA u otros)
-    const lowerUrl = icsUrl.toLowerCase();
-    if (!lowerUrl.includes('cv.uma.es') && !lowerUrl.includes('moodle') && !lowerUrl.includes('calendar/export_execute.php')) {
-        return res.status(400).json({ error: 'La URL no parece ser un enlace de exportación de calendario Moodle válido.' });
+exports.handler = async (event, context) => {
+    // Solo permitir POST
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
     try {
-        console.log('[ICS Import] Descargando calendario desde:', icsUrl);
+        const { icsUrl } = JSON.parse(event.body);
+
+        if (!icsUrl) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'URL del calendario requerida' })
+            };
+        }
+
+        console.log('[Netlify Function] Descargando:', icsUrl);
 
         const response = await axios.get(icsUrl, {
-            timeout: 20000,
+            timeout: 15000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/calendar, text/plain, */*'
             }
         });
+
         const icsData = response.data;
 
         if (!icsData || (typeof icsData === 'string' && !icsData.includes('BEGIN:VCALENDAR'))) {
-            return res.status(400).json({ error: 'La URL no devolvió un calendario válido. Asegúrate de copiar el enlace de "URL de calendario".' });
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'La URL no devolvió un calendario válido. Asegúrate de copiar el enlace de "URL de calendario".' })
+            };
         }
 
-        // Parsear eventos del ICS
         const events = parseICS(icsData);
-        console.log(`[ICS Import] Se encontraron ${events.length} eventos.`);
 
-        return res.json({
-            success: true,
-            tasks: events,
-            total: events.length,
-            message: `Se importaron ${events.length} tareas del Campus Virtual.`
-        });
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                success: true,
+                tasks: events,
+                total: events.length
+            })
+        };
 
-    } catch (err) {
-        console.error('[ICS Import Error]', err.message);
-
-        if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
-            return res.status(503).json({
-                error: 'No se pudo conectar con el servidor de la UMA.'
-            });
-        }
-
-        if (err.response && err.response.status === 401) {
-            return res.status(401).json({
-                error: 'Token de calendario expirado. Genera uno nuevo desde Moodle.'
-            });
-        }
-
-        return res.status(500).json({
-            error: 'Error al importar el calendario: ' + err.message
-        });
+    } catch (error) {
+        console.error('Error:', error.message);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Error al procesar el calendario: ' + error.message })
+        };
     }
-});
+};
 
-// ============================================================
-// Parseador de formato ICS/iCal
-// ============================================================
 function parseICS(icsText) {
     const events = [];
     const DAYS_MAP = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-    // Desdoblar líneas largas (RFC 5545: continuación con espacio/tab)
-    // Moodle a veces usa \r\n, \n, o solo espacios para continuar líneas
     const unfolded = icsText
         .replace(/\r\n[ \t]/g, '')
         .replace(/\r[ \t]/g, '')
         .replace(/\n[ \t]/g, '')
         .replace(/\r\n/g, '\n')
         .replace(/\r/g, '\n');
+
     const blocks = unfolded.split('BEGIN:VEVENT');
 
     for (let i = 1; i < blocks.length; i++) {
@@ -104,12 +84,10 @@ function parseICS(icsText) {
 
         if (!summary || !dtstart) continue;
 
-        // Parsear fecha
         const date = parseICSDate(dtstart);
         if (!date) continue;
 
         const endDate = dtend ? parseICSDate(dtend) : null;
-
         const dayName = DAYS_MAP[date.getDay()];
         const hours = String(date.getHours()).padStart(2, '0');
         const mins = String(date.getMinutes()).padStart(2, '0');
@@ -123,17 +101,15 @@ function parseICS(icsText) {
             endMins = mins;
         }
 
-        // Limpiar el título
         let cleanTitle = summary
             .replace(/^Vencimiento de /i, '')
             .replace(/\s+/g, ' ')
             .trim();
 
-        // Limpiar descripción
         let cleanDesc = description
             ? description
                 .replace(/\\n/g, ' ')
-                .replace(/\\,/g, ',')
+                .replace(/\\, /g, ',')
                 .replace(/<[^>]*>/g, '')
                 .substring(0, 120)
                 .trim()
@@ -153,20 +129,15 @@ function parseICS(icsText) {
         });
     }
 
-    // Ordenar por fecha
     events.sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate));
-
     return events;
 }
 
 function extractField(block, fieldName) {
-    // Buscar el campo con o sin parámetros (ej: DTSTART;VALUE=DATE:20260312)
     const regex = new RegExp(`^${fieldName}[;:](.*)$`, 'm');
     const match = block.match(regex);
     if (!match) return '';
-
     let value = match[1];
-    // Si tiene parámetros antes del valor (ej: ;VALUE=DATE:20260312)
     if (value.includes(':')) {
         value = value.split(':').pop();
     }
@@ -174,12 +145,9 @@ function extractField(block, fieldName) {
 }
 
 function parseICSDate(dateStr) {
-    // Formatos: 20260312T090000Z o 20260312T090000 o 20260312
     try {
         const clean = dateStr.replace(/[^0-9TZ]/g, '');
-
         if (clean.length >= 15) {
-            // Con hora: 20260312T090000Z
             const year = parseInt(clean.substring(0, 4));
             const month = parseInt(clean.substring(4, 6)) - 1;
             const day = parseInt(clean.substring(6, 8));
@@ -192,32 +160,11 @@ function parseICSDate(dateStr) {
             }
             return new Date(year, month, day, hour, min, sec);
         } else if (clean.length >= 8) {
-            // Solo fecha: 20260312
             const year = parseInt(clean.substring(0, 4));
             const month = parseInt(clean.substring(4, 6)) - 1;
             const day = parseInt(clean.substring(6, 8));
             return new Date(year, month, day, 9, 0, 0);
         }
-    } catch (_e) { /* ignore */ }
+    } catch (_e) { }
     return null;
 }
-
-// ============================================================
-// Health check
-// ============================================================
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'Agent.ai Moodle Bridge', timestamp: new Date().toISOString() });
-});
-
-// SPA Catch-all
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-    console.log('=============================================');
-    console.log(`🚀 SERVIDOR ACTIVO EN PUERTO: ${PORT}`);
-    console.log(`🏠 Dominio: http://0.0.0.0:${PORT}`);
-    console.log(`📂 Sirviendo archivos desde: ${path.join(__dirname, 'public')}`);
-    console.log('=============================================');
-});

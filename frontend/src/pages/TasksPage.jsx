@@ -252,12 +252,15 @@ const TasksPage = () => {
                     <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '4px' }}>Agenda</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Gestión académica inteligente</p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    {umaUrl && (
-                        <button onClick={handleManualRefresh} className={`btn-icon ${isSyncing ? 'animate-spin' : ''}`} style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '14px', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isSyncing ? 'var(--primary)' : 'white' }}>
-                            <RefreshCw size={20} />
-                        </button>
-                    )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                        onClick={() => navigate('/sync')}
+                        className="btn-icon"
+                        style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: '14px', width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                        title="Sincronizar con Campus Virtual"
+                    >
+                        <RefreshCw size={20} />
+                    </button>
                     <button onClick={() => setShowAddModal(true)} className="btn btn-primary" style={{ padding: '0 20px', borderRadius: '14px', height: '44px', fontWeight: 700 }}>
                         <Plus size={18} /> Nueva
                     </button>

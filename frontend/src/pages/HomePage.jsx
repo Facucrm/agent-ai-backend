@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { useUser, ROLES } from '../context/UserContext';
 import PremiumFeature from '../components/PremiumFeature';
 import SyncUMA from '../components/SyncUMA';
-import SurvivalAlerts from '../components/SurvivalAlerts';
 import ExamMode from '../components/ExamMode';
 
 const HomePage = () => {
@@ -157,10 +156,6 @@ const HomePage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <PremiumFeature>
                         <SyncUMA />
-                    </PremiumFeature>
-
-                    <PremiumFeature>
-                        <SurvivalAlerts />
                     </PremiumFeature>
 
                     <PremiumFeature>

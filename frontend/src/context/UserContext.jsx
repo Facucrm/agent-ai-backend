@@ -32,6 +32,17 @@ export const UserProvider = ({ children }) => {
             return;
         }
 
+        // Carga inmediata desde caché local para acceso instantáneo (Persistencia Instantánea)
+        const cachedUser = localStorage.getItem('planit_user_auth_cache');
+        if (cachedUser) {
+            try {
+                setUser(JSON.parse(cachedUser));
+                setLoading(false); // Entramos directo a la app, Firebase verificará en segundo plano
+            } catch (e) {
+                console.error("Error parsing cached user", e);
+            }
+        }
+
         // Timer de seguridad para evitar pantalla en blanco infinita
         const safetyTimer = setTimeout(() => {
             if (loading) {
@@ -63,13 +74,21 @@ export const UserProvider = ({ children }) => {
                         await setDoc(userDocRef, metaData);
                     }
 
-                    setUser({
+                    // Verificación de cuenta Administrador/VIP solicitada por el usuario
+                    const isVipUser = firebaseUser.email === 'facucrm62@gmail.com' || firebaseUser.email === 'facucrm62gmail.com';
+
+                    const userData = {
                         uid: firebaseUser.uid,
                         email: firebaseUser.email,
                         name: firebaseUser.displayName || 'Estudiante Planit',
                         photo: firebaseUser.photoURL,
-                        ...metaData
-                    });
+                        ...metaData,
+                        role: isVipUser ? ROLES.PREMIUM : (metaData.role || ROLES.FREE)
+                    };
+
+                    setUser(userData);
+                    // Guardar en caché para acceso instantáneo en el próximo inicio
+                    localStorage.setItem('planit_user_auth_cache', JSON.stringify(userData));
                 } catch (error) {
                     console.error("Error al cargar datos de Firestore:", error);
                     // Fallback a localStorage si Firestore falla
@@ -88,6 +107,7 @@ export const UserProvider = ({ children }) => {
                 }
             } else {
                 setUser(null);
+                localStorage.removeItem('planit_user_auth_cache');
             }
             setLoading(false);
             clearTimeout(safetyTimer);

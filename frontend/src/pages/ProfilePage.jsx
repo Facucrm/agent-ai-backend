@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { User, Shield, LogOut, ChevronRight, Mail, Bell, Moon, Users, Copy, Check, Gift } from 'lucide-react';
+import { User, Shield, LogOut, ChevronRight, Mail, Bell, Moon, Users, Copy, Check, Gift, QrCode, X, Share2 } from 'lucide-react';
 import { useUser, ROLES } from '../context/UserContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import PremiumFeature from '../components/PremiumFeature';
+import SurvivalAlerts from '../components/SurvivalAlerts';
 
 const ProfilePage = () => {
     const { user, addReferral, isPremium, logout } = useUser();
     const [copied, setCopied] = useState(false);
+    const [showQR, setShowQR] = useState(false);
 
     const handleCopy = () => {
         const link = `https://planit.uma.es/join/${user.referralCode}`;
@@ -69,11 +72,20 @@ const ProfilePage = () => {
                     Gamificación
                 </h4>
                 <div className="card" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)', borderColor: 'var(--secondary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                        <div style={{ background: 'var(--secondary)', padding: '10px', borderRadius: '12px' }}>
-                            <Users size={20} color="white" />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ background: 'var(--secondary)', padding: '10px', borderRadius: '12px' }}>
+                                <Users size={20} color="white" />
+                            </div>
+                            <h4 style={{ fontSize: '1rem', color: 'white' }}>Invita a tu clase</h4>
                         </div>
-                        <h4 style={{ fontSize: '1rem', color: 'white' }}>Invita a tu clase</h4>
+                        <button
+                            onClick={() => setShowQR(true)}
+                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white' }}
+                            title="Mostrar QR para compartir"
+                        >
+                            <QrCode size={20} />
+                        </button>
                     </div>
 
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.4 }}>
@@ -125,9 +137,16 @@ const ProfilePage = () => {
                             className="btn btn-ghost"
                             style={{ width: '100%', marginTop: '12px', fontSize: '0.75rem', borderStyle: 'dashed' }}
                         >
-                            <Gift size={14} /> Simular Invitación (+1)
+                            <User size={14} /> Simular Invitación (+1)
                         </button>
                     )}
+                </div>
+
+                {/* Modo Survival movido desde Inicio */}
+                <div style={{ marginTop: '20px' }}>
+                    <PremiumFeature>
+                        <SurvivalAlerts />
+                    </PremiumFeature>
                 </div>
             </div>
 
@@ -183,6 +202,50 @@ const ProfilePage = () => {
             <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '32px', opacity: 0.5 }}>
                 Version 1.0.0 (Alpha Build)
             </p>
+
+            {/* ── QR Share Modal ── */}
+            <AnimatePresence>
+                {showQR && (
+                    <div
+                        className="modal-overlay"
+                        onClick={() => setShowQR(false)}
+                        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            onClick={e => e.stopPropagation()}
+                            className="card"
+                            style={{ width: '100%', maxWidth: '380px', padding: '32px', textAlign: 'center' }}
+                        >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Share2 size={18} color="var(--primary)" />
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800 }}>Compartir Planit</h3>
+                                </div>
+                                <button onClick={() => setShowQR(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={24} /></button>
+                            </div>
+
+                            <div style={{ width: '200px', height: '200px', background: 'white', margin: '0 auto 24px', padding: '12px', borderRadius: '20px', boxShadow: '0 0 40px var(--primary-glow)' }}>
+                                <img
+                                    src="https://api.qrserver.com/v1/create-qr-code/?size=176x176&data=https://plannituma.netlify.app/&color=3b82f6"
+                                    alt="QR Code"
+                                    style={{ width: '100%', height: '100%', borderRadius: '10px' }}
+                                />
+                            </div>
+
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
+                                Deja que tus amigos escaneen este código para que prueben la app directamente en sus móviles.
+                            </p>
+
+                            <button onClick={() => setShowQR(false)} className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '12px' }}>
+                                Entendido
+                            </button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
